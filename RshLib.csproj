@@ -1,0 +1,68 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AddImplicitlyTypedReferences>false</AddImplicitlyTypedReferences>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
+    <Reference Include="mscorlib">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/System.dll</HintPath>
+    </Reference>
+    <Reference Include="netstandard">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/netstandard.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp" Publicize="true">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>/home/rushell/Documents/CU/BepInEx/core/BepInEx.dll</HintPath>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>/home/rushell/Documents/CU/BepInEx/core/0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.Physics2DModule">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.Physics2DModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TilemapModule">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.TilemapModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.ParticleSystemModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.AudioModule.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/Unity.TextMeshPro.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/System.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.GridModule">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.GridModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TilemapModule">
+      <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.TilemapModule.dll</HintPath>
+    </Reference>
+    <Reference Include="KrokoshaCasualtiesMP" Publicize="true">
+      <HintPath>/home/rushell/Documents/CU/BepInEx/plugins/KrokMP/KrokoshaCasualtiesMP.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
