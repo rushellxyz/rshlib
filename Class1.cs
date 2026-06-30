@@ -14,7 +14,7 @@ using Newtonsoft.Json.Linq;
 
 namespace RshLib
 {
-    [BepInPlugin("com.rushellxyz.rshlib", "Rsh Lib", "3.0.2")]
+    [BepInPlugin("com.rushellxyz.rshlib", "Rsh Lib", "3.1.0")]
     [BepInDependency("KrokoshaCasualtiesMP", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
@@ -25,7 +25,7 @@ namespace RshLib
         {
             krokMpEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("KrokoshaCasualtiesMP") && 0 == PlayerPrefs.GetInt("KrokoshaCasualtiesMP_FORCE_DISABLE_MP_MOD");
 
-            UnityEngine.Debug.Log($"[RshLib] RshLib 3.0.2, KrokMP: {krokMpEnabled}");
+            UnityEngine.Debug.Log($"[RshLib] RshLib 3.1.0, KrokMP: {krokMpEnabled}");
             if ("7.0.1" != Application.version)
                 UnityEngine.Debug.LogError($"[RshLib] ! GAME VERSION MISMATCH, Expected: 7.0.1, Current: {Application.version}, Loading will continue");
             var harmony = new Harmony("com.rushellxyz.rshlib");
@@ -33,8 +33,11 @@ namespace RshLib
 
             if (!krokMpEnabled)
                 return;
-            PatchManualy(harmony, "KrokoshaCasualtiesMP.NewCoolerObjectPacketWriteReadSystem", "LoadObjectResource", "LoadObjectResourcePatch");
-            PatchManualy(harmony, "KrokoshaCasualtiesMP.Con", "SpawnThingOnPlayer", "ConPatch");
+            PatchPrefix(harmony, "KrokoshaCasualtiesMP.NewCoolerObjectPacketWriteReadSystem", "LoadObjectResource", "RshLib.LoadObjectResourcePatch");
+            PatchPrefix(harmony, "KrokoshaCasualtiesMP.Con", "SpawnThingOnPlayer", "RshLib.ConPatch");
+            PatchPostfix(harmony, "KrokoshaCasualtiesMP.NetPlayer", "SlowUpdate", "RshLib.AlertTracker");
+            PatchPostfix(harmony, "KrokoshaCasualtiesMP.NetPlayer", "SlowUpdate", "RshLib.NetworkMsgReigister");
+            MpValidator.SetupMpValidator();
         }
 
         public static void RegisterItem(string itemId, RshItem rshItem)
@@ -52,14 +55,21 @@ namespace RshLib
             itemRegistry.Add(itemId, rshItem);
         }
 
-        void PatchManualy(Harmony harmony, string targetClass, string targetMethod, string prefixClass)
+        internal void PatchPrefix(Harmony harmony, string targetClass, string targetMethod, string prefixClass)
         {
             var target = AccessTools.Method(AccessTools.TypeByName(targetClass), targetMethod);
-            var prefix = AccessTools.Method(System.Type.GetType($"RshLib.{prefixClass}"), "Prefix");
+            var prefix = AccessTools.Method(System.Type.GetType(prefixClass), "Prefix");
             harmony.Patch(target, prefix: new HarmonyMethod(prefix));
         }
 
-        public static string GetMPSavePath()
+        internal void PatchPostfix(Harmony harmony, string targetClass, string targetMethod, string postfixClass)
+        {
+            var target = AccessTools.Method(AccessTools.TypeByName(targetClass), targetMethod);
+            var postfix = AccessTools.Method(System.Type.GetType(postfixClass), "Postfix");
+            harmony.Patch(target, postfix: new HarmonyMethod(postfix));
+        }
+
+        internal static string GetMPSavePath()
         {
             if (!string.IsNullOrEmpty(KrokoshaCasualtiesMP.SavesystemPatch.savedatapathreplacement))
                 return KrokoshaCasualtiesMP.SavesystemPatch.savedatapathreplacement;
@@ -610,12 +620,15 @@ namespace RshLib
         }
     }
 
-    [HarmonyPatch(typeof(Item), "Stats", MethodType.Getter)]
+    [HarmonyPatch(typeof(Item), "GetItem")]
     internal class ItemPatch2
     {
-        static bool Prefix(Item __instance, ref ItemInfo __result)
+        static bool Prefix(Item __instance, ref ItemInfo __result, string id)
         {
-            __result = Item.GetItem(__instance.id.Split("$")[0]);
+            int suffixIndex = id.IndexOf('$');
+            if (0 < suffixIndex)
+                id = id.Substring(0, suffixIndex);
+            __result = Item.GlobalItems[id];
             return false;
         }
     }
@@ -732,7 +745,9 @@ namespace RshLib
     {
         static bool Prefix(Body __instance, ref Item __result, string itemid)
         {
-            itemid = itemid.Split("$")[0];
+            int suffixIndex = itemid.IndexOf('$');
+            if (0 < suffixIndex)
+                itemid = itemid.Substring(0, suffixIndex);
             foreach (Transform item in __instance.LimbByName(Item.GlobalItems[itemid.Split("$",2)[0]].desiredWearLimb).transform)
             {
                 if (item.TryGetComponent<Item>(out var component) && component.Stats.wearable && component.id.Split("$")[0] == itemid)
@@ -751,7 +766,9 @@ namespace RshLib
     {
         static bool Prefix(Body __instance, ref bool __result, string itemid)
         {
-            itemid = itemid.Split("$")[0];
+            int suffixIndex = itemid.IndexOf('$');
+            if (0 < suffixIndex)
+                itemid = itemid.Substring(0, suffixIndex);
             foreach (Transform item in __instance.LimbByName(Item.GlobalItems[itemid].desiredWearLimb).transform)
             {
                 if (item.TryGetComponent<Item>(out var component) && component.Stats.wearable && component.id.Split("$")[0] == itemid)
@@ -769,9 +786,50 @@ namespace RshLib
     {
         static bool Prefix(KrokoshaCasualtiesMP.NewCoolerObjectPacketWriteReadSystem __instance, ref GameObject __result, string resourceid, in Vector2 pos)
         {
-            if (!Plugin.itemRegistry.TryGetValue(resourceid.Split("$")[0], out var _))
-                return true;
-            __result = Utils.Create(resourceid, pos, 0f);
+            if (Plugin.itemRegistry.TryGetValue(resourceid.Split("$")[0], out var _))
+            {
+                __result = Utils.Create(resourceid, pos, 0f);
+            }
+       else {
+                bool flag = false;
+                GameObject gameObject = Resources.Load<GameObject>(resourceid);
+                if (gameObject == null)
+                {
+                    if (!resourceid.StartsWith("KMPSR_"))
+                    {
+                        //log.error("Resource does not exist: " + resourceid + " ");
+                        __result = null;
+                        return false;
+                    }
+                    if (KrokoshaCasualtiesMP.ScavMultiBuildingSynchronizer.known_entities_with_nonunique_id.TryGetValue(resourceid, out var value))
+                    {
+                        gameObject = value;
+                        if (gameObject.TryGetComponent<UnityEngine.Tilemaps.Tilemap>(out var _))
+                        {
+                            flag = true;
+                        }
+                    }
+                    else
+                    {
+                        gameObject = Resources.Load<GameObject>(resourceid.Substring("KMPSR_".Count()));
+                        /*if (!gameObject)
+                        {
+                            log.error("Special resource wasn't identified! " + resourceid);
+                        }*/
+                    }
+                }
+                if (gameObject == null)
+                {
+                    __result = null;
+                    return false;
+                }
+                GameObject gameObject2 = UnityEngine.Object.Instantiate(gameObject, pos, Quaternion.identity);
+                if (flag)
+                {
+                    gameObject2.transform.SetParent(WorldGeneration.world.worldGrid.transform);
+                }
+                __result = gameObject2;
+            }
             return false;
         }
     }
