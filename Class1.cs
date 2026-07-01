@@ -14,7 +14,7 @@ using Newtonsoft.Json.Linq;
 
 namespace RshLib
 {
-    [BepInPlugin("com.rushellxyz.rshlib", "Rsh Lib", "3.1.0")]
+    [BepInPlugin("com.rushellxyz.rshlib", "Rsh Lib", "3.1.1")]
     [BepInDependency("KrokoshaCasualtiesMP", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
@@ -25,7 +25,7 @@ namespace RshLib
         {
             krokMpEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("KrokoshaCasualtiesMP") && 0 == PlayerPrefs.GetInt("KrokoshaCasualtiesMP_FORCE_DISABLE_MP_MOD");
 
-            UnityEngine.Debug.Log($"[RshLib] RshLib 3.1.0, KrokMP: {krokMpEnabled}");
+            UnityEngine.Debug.Log($"[RshLib] RshLib 3.1.1, KrokMP: {krokMpEnabled}");
             if ("7.0.1" != Application.version)
                 UnityEngine.Debug.LogError($"[RshLib] ! GAME VERSION MISMATCH, Expected: 7.0.1, Current: {Application.version}, Loading will continue");
             var harmony = new Harmony("com.rushellxyz.rshlib");
@@ -36,7 +36,7 @@ namespace RshLib
             PatchPrefix(harmony, "KrokoshaCasualtiesMP.NewCoolerObjectPacketWriteReadSystem", "LoadObjectResource", "RshLib.LoadObjectResourcePatch");
             PatchPrefix(harmony, "KrokoshaCasualtiesMP.Con", "SpawnThingOnPlayer", "RshLib.ConPatch");
             PatchPostfix(harmony, "KrokoshaCasualtiesMP.NetPlayer", "SlowUpdate", "RshLib.AlertTracker");
-            PatchPostfix(harmony, "KrokoshaCasualtiesMP.NetPlayer", "SlowUpdate", "RshLib.NetworkMsgReigister");
+            PatchPostfix(harmony, "KrokoshaCasualtiesMP.Net", "ShutdownReset", "RshLib.NetworkMsgReigister");
             MpValidator.SetupMpValidator();
         }
 
