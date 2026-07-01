@@ -64,5 +64,8 @@
     <Reference Include="KrokoshaCasualtiesMP" Publicize="true">
       <HintPath>/home/rushell/Documents/CU/BepInEx/plugins/KrokMP/KrokoshaCasualtiesMP.dll</HintPath>
     </Reference>
+    <Reference Include="LiteNetLib">
+      <HintPath>/home/rushell/Documents/CU/BepInEx/plugins/KrokMP/LiteNetLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
