@@ -61,11 +61,11 @@
     <Reference Include="UnityEngine.TilemapModule">
       <HintPath>/home/rushell/Documents/CU/CasualtiesUnknown_Data/Managed/UnityEngine.TilemapModule.dll</HintPath>
     </Reference>
-    <Reference Include="KrokoshaCasualtiesMP" Publicize="true">
-      <HintPath>/home/rushell/Documents/CU/BepInEx/plugins/KrokMP/KrokoshaCasualtiesMP.dll</HintPath>
+    <Reference Include="CasualtiesMP" Publicize="true">
+      <HintPath>/home/rushell/Documents/CU/BepInEx/plugins/Together/CasualtiesMP.dll</HintPath>
     </Reference>
     <Reference Include="LiteNetLib">
-      <HintPath>/home/rushell/Documents/CU/BepInEx/plugins/KrokMP/LiteNetLib.dll</HintPath>
+      <HintPath>/home/rushell/Documents/CU/BepInEx/plugins/Together/LiteNetLib.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
