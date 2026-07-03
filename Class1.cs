@@ -15,29 +15,27 @@ using Newtonsoft.Json.Linq;
 namespace RshLib
 {
     [BepInPlugin("com.rushellxyz.rshlib", "Rsh Lib", "3.1.1")]
-    [BepInDependency("KrokoshaCasualtiesMP", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("CasualtiesMP", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public static Dictionary<string, RshItem> itemRegistry = new Dictionary<string, RshItem>();
-        public static bool krokMpEnabled;
+        public static bool togetherMpEnabled;
 
         void Awake()
         {
-            krokMpEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("KrokoshaCasualtiesMP") && 0 == PlayerPrefs.GetInt("KrokoshaCasualtiesMP_FORCE_DISABLE_MP_MOD");
+            togetherMpEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("CasualtiesMP") && 0 == PlayerPrefs.GetInt("CasualtiesMP_FORCE_DISABLE_MP_MOD");
 
-            UnityEngine.Debug.Log($"[RshLib] RshLib 3.1.1, KrokMP: {krokMpEnabled}");
+            UnityEngine.Debug.Log($"[RshLib] RshLib 3.1.1, Together: {togetherMpEnabled}");
             if ("7.0.1" != Application.version)
                 UnityEngine.Debug.LogError($"[RshLib] ! GAME VERSION MISMATCH, Expected: 7.0.1, Current: {Application.version}, Loading will continue");
             var harmony = new Harmony("com.rushellxyz.rshlib");
             harmony.PatchAll();
 
-            if (!krokMpEnabled)
+            if (!togetherMpEnabled)
                 return;
-            PatchPrefix(harmony, "KrokoshaCasualtiesMP.NewCoolerObjectPacketWriteReadSystem", "LoadObjectResource", "RshLib.LoadObjectResourcePatch");
-            PatchPrefix(harmony, "KrokoshaCasualtiesMP.Con", "SpawnThingOnPlayer", "RshLib.ConPatch");
-            PatchPostfix(harmony, "KrokoshaCasualtiesMP.NetPlayer", "SlowUpdate", "RshLib.AlertTracker");
-            PatchPostfix(harmony, "KrokoshaCasualtiesMP.Net", "ShutdownReset", "RshLib.NetworkMsgReigister");
-            MpValidator.SetupMpValidator();
+            PatchPrefix(harmony, "Together.SyncInfo", "InstantiateResource", "RshLib.InstantiateResourcePatch");
+            PatchPrefix(harmony, "Together.Con", "SpawnThingOnPlayer", "RshLib.ConPatch");
+            Network.Awake(harmony);
         }
 
         public static void RegisterItem(string itemId, RshItem rshItem)
@@ -55,14 +53,14 @@ namespace RshLib
             itemRegistry.Add(itemId, rshItem);
         }
 
-        internal void PatchPrefix(Harmony harmony, string targetClass, string targetMethod, string prefixClass)
+        internal static void PatchPrefix(Harmony harmony, string targetClass, string targetMethod, string prefixClass)
         {
             var target = AccessTools.Method(AccessTools.TypeByName(targetClass), targetMethod);
             var prefix = AccessTools.Method(System.Type.GetType(prefixClass), "Prefix");
             harmony.Patch(target, prefix: new HarmonyMethod(prefix));
         }
 
-        internal void PatchPostfix(Harmony harmony, string targetClass, string targetMethod, string postfixClass)
+        internal static void PatchPostfix(Harmony harmony, string targetClass, string targetMethod, string postfixClass)
         {
             var target = AccessTools.Method(AccessTools.TypeByName(targetClass), targetMethod);
             var postfix = AccessTools.Method(System.Type.GetType(postfixClass), "Postfix");
@@ -71,11 +69,7 @@ namespace RshLib
 
         internal static string GetMPSavePath()
         {
-            if (!string.IsNullOrEmpty(KrokoshaCasualtiesMP.SavesystemPatch.savedatapathreplacement))
-                return KrokoshaCasualtiesMP.SavesystemPatch.savedatapathreplacement;
-       else if (KrokoshaCasualtiesMP.KrokoshaScavMultiplayer.network_system_is_running && KrokoshaCasualtiesMP.SavesystemPatch.HasMultiplayerSaveFile())
-                return KrokoshaCasualtiesMP.SavesystemPatch.mpsavefolder;
-       else     return Application.persistentDataPath;
+            return Together.SavesystemPatch.ReplacementFor_Application_persistentDataPath();
         }
     }
 
@@ -206,7 +200,7 @@ namespace RshLib
             Sound.Play("footstep/Rock/11", __instance.transform.position);
             // krok mp would destroy freshitmdrop if no ones nearby
             // yet, this code exceutes on host only, so flag would otherwise false if client openned it
-            bool flag = Vector2.Distance(__instance.transform.position, PlayerCamera.main.body.transform.position) < 8f || Plugin.krokMpEnabled;
+            bool flag = Vector2.Distance(__instance.transform.position, PlayerCamera.main.body.transform.position) < 8f || Plugin.togetherMpEnabled;
             ItemDrop[] array = __instance.itemsDropOnDestroy;
             foreach (ItemDrop itemDrop in array)
             {
@@ -378,7 +372,7 @@ namespace RshLib
     [HarmonyPatch(typeof(SaveSystem), "TryLoadGame")]
     [HarmonyAfter("KrokoshaCasualtiesMP")]
     internal class SaveSystemPatch
-    {
+    { // TODO make it a transpiler
         static bool Prefix()
         {
             Body body = PlayerCamera.main.body;
@@ -392,7 +386,7 @@ namespace RshLib
                 return false;
             }
             string savePath = "";
-            if (Plugin.krokMpEnabled)
+            if (Plugin.togetherMpEnabled)
                 savePath = Plugin.GetMPSavePath();
        else     savePath = Application.persistentDataPath;
             JObject jObject;
@@ -782,77 +776,22 @@ namespace RshLib
         }
     }
 
-    internal class LoadObjectResourcePatch
-    {
-        static bool Prefix(KrokoshaCasualtiesMP.NewCoolerObjectPacketWriteReadSystem __instance, ref GameObject __result, string resourceid, in Vector2 pos)
-        {
-            if (Plugin.itemRegistry.TryGetValue(resourceid.Split("$")[0], out var _))
-            {
-                __result = Utils.Create(resourceid, pos, 0f);
-            }
-       else {
-                bool flag = false;
-                GameObject gameObject = Resources.Load<GameObject>(resourceid);
-                if (gameObject == null)
-                {
-                    if (!resourceid.StartsWith("KMPSR_"))
-                    {
-                        //log.error("Resource does not exist: " + resourceid + " ");
-                        __result = null;
-                        return false;
-                    }
-                    if (KrokoshaCasualtiesMP.ScavMultiBuildingSynchronizer.known_entities_with_nonunique_id.TryGetValue(resourceid, out var value))
-                    {
-                        gameObject = value;
-                        if (gameObject.TryGetComponent<UnityEngine.Tilemaps.Tilemap>(out var _))
-                        {
-                            flag = true;
-                        }
-                    }
-                    else
-                    {
-                        gameObject = Resources.Load<GameObject>(resourceid.Substring("KMPSR_".Count()));
-                        /*if (!gameObject)
-                        {
-                            log.error("Special resource wasn't identified! " + resourceid);
-                        }*/
-                    }
-                }
-                if (gameObject == null)
-                {
-                    __result = null;
-                    return false;
-                }
-                GameObject gameObject2 = UnityEngine.Object.Instantiate(gameObject, pos, Quaternion.identity);
-                if (flag)
-                {
-                    gameObject2.transform.SetParent(WorldGeneration.world.worldGrid.transform);
-                }
-                __result = gameObject2;
-            }
-            return false;
-        }
-    }
-
     internal class ConPatch
     {
         static bool Prefix(ref GameObject __result, string resourceid, Body body = null, bool give_it_to_em = false, GameObject container = null)
         {
-            if (KrokoshaCasualtiesMP.KrokoshaScavMultiplayer.is_dedicated_server && body == null && KrokoshaCasualtiesMP.NetPlayer.BodyToPlayerDict.Count > 0)
+            int suffixIndex = resourceid.IndexOf('$');
+            if (0 < suffixIndex)
+                resourceid = resourceid.Substring(0, suffixIndex);
+            if (Together.Net.IsDedicatedServer && body == null && Together.ScavPlayer.BodyToPlayerDict.Count > 0)
             {
-                body = KrokoshaCasualtiesMP.NetPlayer.BodyToPlayerDict.First().Key;
+                body = Together.ScavPlayer.BodyToPlayerDict.First().Key;
             }
             if ((object)body == null)
             {
                 body = PlayerCamera.main.body;
             }
             GameObject gameObject = Utils.Create(resourceid, (Vector2)body.transform.position + UnityEngine.Random.insideUnitCircle, 0f);
-            if (null == gameObject)
-            {
-                KrokoshaCasualtiesMP.Plugin.log.LogError("Unknown resource: " + resourceid);
-                __result = null;
-                return false;
-            }
             if (gameObject.TryGetComponent<AmmoScript>(out var component))
             {
                 component.rounds = component.maxRounds;
@@ -878,7 +817,6 @@ namespace RshLib
                 }
             }
             __result = gameObject;
-
             return false;
         }
     }
