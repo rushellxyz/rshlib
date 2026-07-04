@@ -42,7 +42,6 @@ namespace RshLib
                 return;
             PatchPrefix(harmony, "Together.SyncInfo", "InstantiateResource", "RshLib.InstantiateResourcePatch");
             PatchPrefix(harmony, "Together.Con", "SpawnThingOnPlayer", "RshLib.ConPatch");
-            PatchPrefix(harmony, "Together.KrokoshaTraderTrackerComponent", "Server_SendTraderInventory", "RshLib.FixTradersForClientsWithoutRshlib", new Type[] { typeof(List<knetid>) });
             MpValidator.Awake(harmony);
         }
 
