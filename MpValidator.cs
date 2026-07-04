@@ -12,9 +12,9 @@ namespace RshLib
         public static void Awake(Harmony harmony)
         {
             Plugin.PatchPostfix(harmony, "Together.ScavPlayer", "SlowUpdate", "RshLib.AlertTracker");
-            Plugin.PatchPrefix(harmony, "Together.KrokoshaTraderTrackerComponent", "Server_SendTraderInventory", "RshLib.FixTradersForClientsWithoutRshlib");
+            //Plugin.PatchPrefix(harmony, "Together.KrokoshaTraderTrackerComponent", "Server_SendTraderInventory", "RshLib.FixTradersForClientsWithoutRshlib");
 
-            Network.serverRecivers.Add(CLIENT_SEND_ITEM_REGISTRY, ReciveItemRegistryInformation);
+            Network.serverReceivers.Add(CLIENT_SEND_ITEM_REGISTRY, ReciveItemRegistryInformation);
 
             ScavPlayer.OnPlayerJoined += delegate(ScavPlayer plr)
             {

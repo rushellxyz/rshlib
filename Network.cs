@@ -11,8 +11,8 @@ namespace RshLib
     {
         public const byte TOGETHER_RECIVER = 226;
 
-        public static Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate> clientRecivers;
-        public static Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate> serverRecivers;
+        public static Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate> clientReceivers;
+        public static Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate> serverReceivers;
         public static HashSet<ushort> missingIds;
 
         public static NetDataWriter CreateWriter(ushort msgId)
@@ -25,14 +25,14 @@ namespace RshLib
         internal static void Awake(Harmony harmony)
         {
             Plugin.PatchPostfix(harmony, "Together.Net", "ShutdownReset", "RshLib.ShutdownResetPostfix");
-            clientRecivers = new Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate>();
-            serverRecivers = new Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate>();
+            clientReceivers = new Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate>();
+            serverReceivers = new Dictionary<ushort, Multiplayer.HandleNamedMessageDelegate>();
         }
 
         internal static void ServerReciver(knetid clientid, ref NetDataReader reader)
         {
             reader.Get(out ushort msgId);
-            if (serverRecivers.TryGetValue(msgId, out var action))
+            if (serverReceivers.TryGetValue(msgId, out var action))
                 action(clientid, ref reader);
        else if (missingIds.Add(msgId))
                 log.error($"Server reciver is not registred: {msgId}");
@@ -41,7 +41,7 @@ namespace RshLib
         internal static void ClientReciver(knetid servid, ref NetDataReader reader)
         {
             reader.Get(out ushort msgId);
-            if (clientRecivers.TryGetValue(msgId, out var action))
+            if (clientReceivers.TryGetValue(msgId, out var action))
                 action(servid, ref reader);
        else if (missingIds.Add(msgId))
                 log.error($"Client reciver is not registred: {msgId}");
