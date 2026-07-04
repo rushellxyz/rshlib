@@ -42,7 +42,7 @@ namespace RshLib
                 return;
             PatchPrefix(harmony, "Together.SyncInfo", "InstantiateResource", "RshLib.InstantiateResourcePatch");
             PatchPrefix(harmony, "Together.Con", "SpawnThingOnPlayer", "RshLib.ConPatch");
-            Network.Awake(harmony);
+            PatchPrefix(harmony, "Together.KrokoshaTraderTrackerComponent", "Server_SendTraderInventory", "RshLib.FixTradersForClientsWithoutRshlib", new Type[] { typeof(List<knetid>) });
             MpValidator.Awake(harmony);
         }
 
@@ -61,17 +61,25 @@ namespace RshLib
             itemRegistry.Add(itemId, rshItem);
         }
 
-        internal static void PatchPrefix(Harmony harmony, string targetClass, string targetMethod, string prefixClass)
+        internal static void PatchPrefix(Harmony harmony, string targetClass, string targetMethod, string prefixClass, Type[] argumentTypes = null)
         {
-            var target = AccessTools.Method(AccessTools.TypeByName(targetClass), targetMethod);
-            var prefix = AccessTools.Method(System.Type.GetType(prefixClass), "Prefix");
+            var targetType = AccessTools.TypeByName(targetClass);
+            var target = AccessTools.Method(targetType, targetMethod, argumentTypes);
+
+            var prefixType = System.Type.GetType(prefixClass);
+            var prefix = AccessTools.Method(prefixType, "Prefix");
+
             harmony.Patch(target, prefix: new HarmonyMethod(prefix));
         }
 
-        internal static void PatchPostfix(Harmony harmony, string targetClass, string targetMethod, string postfixClass)
+        internal static void PatchPostfix(Harmony harmony, string targetClass, string targetMethod, string postfixClass, Type[] argumentTypes = null)
         {
-            var target = AccessTools.Method(AccessTools.TypeByName(targetClass), targetMethod);
-            var postfix = AccessTools.Method(System.Type.GetType(postfixClass), "Postfix");
+            var targetType = AccessTools.TypeByName(targetClass);
+            var target = AccessTools.Method(targetType, targetMethod, argumentTypes);
+
+            var postfixType = System.Type.GetType(postfixClass);
+            var postfix = AccessTools.Method(postfixType, "Postfix");
+
             harmony.Patch(target, postfix: new HarmonyMethod(postfix));
         }
 
