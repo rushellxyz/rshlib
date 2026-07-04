@@ -14,18 +14,25 @@ using Newtonsoft.Json.Linq;
 
 namespace RshLib
 {
-    [BepInPlugin("com.rushellxyz.rshlib", "Rsh Lib", "3.1.1")]
+    [BepInPlugin("com.rushellxyz.rshlib", "Rsh Lib", "3.2.0")]
     [BepInDependency("CasualtiesMP", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public static Dictionary<string, RshItem> itemRegistry = new Dictionary<string, RshItem>();
         public static bool togetherMpEnabled;
+        public static bool anyItemIsRegistred
+        {
+            get
+            {
+                return 0 < Plugin.itemRegistry.Count;
+            }
+        }
 
         void Awake()
         {
             togetherMpEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("CasualtiesMP") && 0 == PlayerPrefs.GetInt("CasualtiesMP_FORCE_DISABLE_MP_MOD");
 
-            UnityEngine.Debug.Log($"[RshLib] RshLib 3.1.1, Together: {togetherMpEnabled}");
+            UnityEngine.Debug.Log($"[RshLib] RshLib 3.2.0, Together: {togetherMpEnabled}");
             if ("7.0.1" != Application.version)
                 UnityEngine.Debug.LogError($"[RshLib] ! GAME VERSION MISMATCH, Expected: 7.0.1, Current: {Application.version}, Loading will continue");
             var harmony = new Harmony("com.rushellxyz.rshlib");
@@ -36,6 +43,7 @@ namespace RshLib
             PatchPrefix(harmony, "Together.SyncInfo", "InstantiateResource", "RshLib.InstantiateResourcePatch");
             PatchPrefix(harmony, "Together.Con", "SpawnThingOnPlayer", "RshLib.ConPatch");
             Network.Awake(harmony);
+            MpValidator.Awake(harmony);
         }
 
         public static void RegisterItem(string itemId, RshItem rshItem)

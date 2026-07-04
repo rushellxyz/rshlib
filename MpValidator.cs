@@ -1,4 +1,5 @@
-using KrokoshaCasualtiesMP;
+using HarmonyLib;
+using Together;
 using LiteNetLib.Utils;
 using LiteNetLib;
 
@@ -6,54 +7,61 @@ namespace RshLib
 {
     internal class MpValidator
     {
-        public static void SetupMpValidator()
+        public const ushort CLIENT_SEND_ITEM_REGISTRY = 0;
+
+        public static void Awake(Harmony harmony)
         {
-            NetPlayer.OnPlayerJoined += delegate(NetPlayer plr)
+            Plugin.PatchPostfix(harmony, "Together.ScavPlayer", "SlowUpdate", "RshLib.AlertTracker");
+            Plugin.PatchPrefix(harmony, "Together.KrokoshaTraderTrackerComponent", "Server_SendTraderInventory", "RshLib.FixTradersForClientsWithoutRshlib");
+
+            Network.serverRecivers.Add(CLIENT_SEND_ITEM_REGISTRY, ReciveItemRegistryInformation);
+
+            ScavPlayer.OnPlayerJoined += delegate(ScavPlayer plr)
             {
-                if (plr.is_local)
-                    return;
-                if (Net.is_client)
+                if (plr.IsLocal && Net.IsClient)
                 {
-                    NetDataWriter writer = KrokoshaCasualtiesMP.Net.CreateWriter(31800);
-                    writer.Put((bool)true);
+                    NetDataWriter writer = Network.CreateWriter(CLIENT_SEND_ITEM_REGISTRY);
                     writer.Put((ushort)3);
-                    writer.Put((ushort)1);
-                    KrokoshaCasualtiesMP.Net.Client_Send(LiteNetLib.DeliveryMethod.ReliableUnordered, in writer);
+                    writer.Put((ushort)2);
+                    writer.Put((ushort)Plugin.itemRegistry.Count);
+                    Net.Client_Send(LiteNetLib.DeliveryMethod.ReliableUnordered, in writer);
                 }
-           else if (0 < Plugin.itemRegistry.Count)
+           else if (Net.IsHost && Plugin.anyItemIsRegistred)
                 {
-                    plr.CUSTOM_LOCAL_DATA["RshLib_Alert_Countdown"] = (int)10;
+                    if (plr.IsLocal)
+                        plr.CUSTOM_LOCAL_DATA["RshLib_present"] = (bool)true;
+               else     plr.CUSTOM_LOCAL_DATA["RshLib_AlertCountdown"] = (byte)11;
                 }
             };
         }
 
-        public static void HReciveVersionInformation(knetid clientId, ref NetDataReader reader)
+        public static void ReciveItemRegistryInformation(knetid clientId, ref NetDataReader reader)
         {
-            NetPlayer.GetNetPlayerFromClientId(clientId).CUSTOM_LOCAL_DATA.Remove("RshLib_Alert_Countdown");
+            reader.Get(out ushort major);
+            reader.Get(out ushort middle);
+            if (3 != major || 2 != middle)
+                UnityEngine.Debug.LogWarning($"[RshLib] {clientId} has a different version {major}.{middle}");
+            ScavPlayer player = ScavPlayer.GetNetPlayerFromClientId(clientId);
+            player.CUSTOM_LOCAL_DATA.Remove("RshLib_AlertCountdown");
+            player.CUSTOM_LOCAL_DATA["RshLib_present"] = (bool)true;
         }
     }
 
     internal class AlertTracker
     {
-        static void Postfix(NetPlayer __instance)
+        static void Postfix(ScavPlayer __instance)
         {
-            if (Net.is_client || !__instance.CUSTOM_LOCAL_DATA.TryGetValue("RshLib_Alert_Countdown", out object value))
+            if (Net.IsClient || !__instance.CUSTOM_LOCAL_DATA.TryGetValue("RshLib_AlertCountdown", out object v))
                 return;
-            int newValue = (int)value - 1;
+            byte newValue = (byte)((byte)v - (byte)1);
             if (0 >= newValue)
             {
-                __instance.CUSTOM_LOCAL_DATA.Remove("RshLib_Alert_Countdown");
-                __instance.Server_DoAlertSingle("You are missing or using an older version of RshLib");
+                __instance.CUSTOM_LOCAL_DATA.Remove("RshLib_AlertCountdown");
+                __instance.CUSTOM_LOCAL_DATA["RshLib_present"] = (bool)false;
+                Con.Server_SendConsoleLog("You are missing RshLib\nYou wont be able to see custom items", __instance);
+                __instance.Server_DoAlertSingle("You are missing RshLib\nYou wont be able to see custom items");
             }
-       else     __instance.CUSTOM_LOCAL_DATA["RshLib_Alert_Countdown"] = newValue;
-        }
-    }
-
-    internal class NetworkMsgReigister
-    {
-        static void Postfix()
-        {
-            Net.RegisterServerReceiver(31800, MpValidator.HReciveVersionInformation);
+       else     __instance.CUSTOM_LOCAL_DATA["RshLib_AlertCountdown"] = newValue;
         }
     }
 }
