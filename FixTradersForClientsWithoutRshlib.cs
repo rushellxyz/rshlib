@@ -21,14 +21,12 @@ namespace RshLib
             {
                 NetObjectRegistry.NewGO(__instance.gameObject);
             }
-            //Enum msgid = NetmsgId.CLIENT_TraderSync_Inventory;
-
             foreach (knetid client in clients_to_enlighten)
             {
                 ScavPlayer player = ScavPlayer.GetNetPlayerFromClientId(client);
                 bool clientHaveRshlib = !player.CUSTOM_LOCAL_DATA.TryGetValue("RshLib_present", out object v) || (bool)v;
 
-                NetDataWriter writer = Net.CreateWriter(196);
+                NetDataWriter writer = Net.CreateWriter((byte)NetmsgId.CLIENT_TraderSync_Inventory);
                 writer.Put((ushort)__instance.si.syncId);
                 writer.Put((short)traderScript.MoveRange.min);
                 writer.Put((short)traderScript.MoveRange.max);
