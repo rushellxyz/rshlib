@@ -1,26 +1,28 @@
+using System.Collections.Generic;
+using System;
 using HarmonyLib;
-using Together;
 using LiteNetLib.Utils;
 using LiteNetLib;
+using Together;
 
 namespace RshLib
 {
     internal class MpValidator
     {
-        public const ushort CLIENT_SEND_ITEM_REGISTRY = 0;
+        public const string CLIENT_SEND_ITEM_REGISTRY = "RshLib_SendItemRegistry";
 
         public static void Awake(Harmony harmony)
         {
             Plugin.PatchPostfix(harmony, "Together.ScavPlayer", "SlowUpdate", "RshLib.AlertTracker");
-            //Plugin.PatchPrefix(harmony, "Together.KrokoshaTraderTrackerComponent", "Server_SendTraderInventory", "RshLib.FixTradersForClientsWithoutRshlib");
+            Plugin.PatchPrefix(harmony, "Together.TrackerTrader", "Server_SendTraderInventory", "RshLib.FixTradersForClientsWithoutRshlib", new Type[] { typeof(List<knetid>) });
 
-            Network.serverReceivers.Add(CLIENT_SEND_ITEM_REGISTRY, ReciveItemRegistryInformation);
+            Multiplayer.RegisterCustomServerReceiver(CLIENT_SEND_ITEM_REGISTRY, ReciveItemRegistryInformation);
 
             ScavPlayer.OnPlayerJoined += delegate(ScavPlayer plr)
             {
                 if (plr.IsLocal && Net.IsClient)
                 {
-                    NetDataWriter writer = Network.CreateWriter(CLIENT_SEND_ITEM_REGISTRY);
+                    NetDataWriter writer = Multiplayer.CreateNamedWriter(CLIENT_SEND_ITEM_REGISTRY);
                     writer.Put((ushort)3);
                     writer.Put((ushort)2);
                     writer.Put((ushort)Plugin.itemRegistry.Count);
@@ -35,15 +37,14 @@ namespace RshLib
             };
         }
 
-        public static void ReciveItemRegistryInformation(knetid clientId, ref NetDataReader reader)
+        public static void ReciveItemRegistryInformation(ScavPlayer plr, NetDataReader reader)
         {
             reader.Get(out ushort major);
             reader.Get(out ushort middle);
             if (3 != major || 2 != middle)
-                UnityEngine.Debug.LogWarning($"[RshLib] {clientId} has a different version {major}.{middle}");
-            ScavPlayer player = ScavPlayer.GetNetPlayerFromClientId(clientId);
-            player.CUSTOM_LOCAL_DATA.Remove("RshLib_AlertCountdown");
-            player.CUSTOM_LOCAL_DATA["RshLib_present"] = (bool)true;
+                UnityEngine.Debug.LogWarning($"[RshLib] {plr} has a different version {major}.{middle}");
+            plr.CUSTOM_LOCAL_DATA.Remove("RshLib_AlertCountdown");
+            plr.CUSTOM_LOCAL_DATA["RshLib_present"] = (bool)true;
         }
     }
 

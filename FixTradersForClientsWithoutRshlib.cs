@@ -7,7 +7,7 @@ namespace RshLib
 {
     internal class FixTradersForClientsWithoutRshlib
     {
-        static bool Prefix(ref KrokoshaTraderTrackerComponent __instance, List<knetid> clients_to_enlighten)
+        static bool Prefix(ref TrackerTrader __instance, List<knetid> clients_to_enlighten)
         {
             if (!Plugin.anyItemIsRegistred)
                 return true;
