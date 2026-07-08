@@ -20,6 +20,8 @@ namespace RshLib
     {
         public static Dictionary<string, RshItem> itemRegistry = new Dictionary<string, RshItem>();
         public static bool togetherMpEnabled;
+        [Obsolete()]
+        public static bool krokMpEnabled = false;
         public static bool anyItemIsRegistred
         {
             get
